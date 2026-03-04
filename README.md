@@ -89,8 +89,8 @@ safepassage/
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/Prdsilva80/pub_erp
-cd safepassage
+git clone https://github.com/Prdsilva80/safepassanger
+cd safepassager
 cp .env.example .env
 # Edit .env — set SECRET_KEY and ANTHROPIC_API_KEY
 ```
