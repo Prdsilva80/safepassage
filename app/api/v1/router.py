@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import ai, alerts, auth, reports, routes, shelters, sos, zones, ws
+from app.api.v1.endpoints import contacts, intelligence
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router,     prefix="/auth",     tags=["Auth"])
 api_router.include_router(zones.router,    prefix="/zones",    tags=["Zones"])
@@ -10,3 +11,5 @@ api_router.include_router(sos.router,      prefix="/sos",      tags=["SOS"])
 api_router.include_router(ai.router,       prefix="/ai",       tags=["AI Assessment"])
 api_router.include_router(alerts.router,   prefix="/alerts",   tags=["Alerts"])
 api_router.include_router(ws.router,       prefix="/ws",       tags=["WebSocket"])
+api_router.include_router(contacts.router, prefix="/contacts", tags=["Emergency Contacts"])
+api_router.include_router(intelligence.router, prefix="/intelligence", tags=["Humanitarian Intelligence"])

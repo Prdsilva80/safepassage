@@ -402,3 +402,43 @@ class AlertLog(Base):
         Index("ix_alert_log_user_created", "user_id", "created_at"),
         Index("ix_alert_log_type", "alert_type"),
     )
+
+class ContactType(str, enum.Enum):
+    HOTLINE = "hotline"
+    OFFICE = "office"
+    SWITCHBOARD = "switchboard"
+    FIELD = "field"
+    FORM = "form"
+
+class EmergencyContact(Base):
+    """Verified emergency contacts for humanitarian organisations."""
+    __tablename__ = "emergency_contacts"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # Organisation
+    organisation = Column(String(128), nullable=False)
+    acronym = Column(String(16), nullable=True)
+    region = Column(String(128), nullable=True)
+    country = Column(String(64), nullable=True)
+    city = Column(String(64), nullable=True)
+    # Contact
+    phone = Column(String(64), nullable=True)
+    email = Column(String(255), nullable=True)
+    website = Column(String(255), nullable=True)
+    contact_type = Column(Enum(ContactType, values_callable=lambda x: [e.value for e in x]), default=ContactType.OFFICE, nullable=False)
+    # Verification
+    sms_confirmed = Column(Boolean, default=False, nullable=False)
+    whatsapp_confirmed = Column(Boolean, default=False, nullable=False)
+    source_url = Column(String(512), nullable=True)
+    last_verified_at = Column(DateTime(timezone=True), nullable=True)
+    notes = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    # Location
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
+
+    __table_args__ = (
+        Index("ix_emergency_contacts_country", "country"),
+        Index("ix_emergency_contacts_org", "organisation"),
+    )
