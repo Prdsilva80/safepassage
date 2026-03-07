@@ -9,6 +9,7 @@ import MapPage from './pages/MapPage'
 import CivilPage from './pages/civil/CivilPage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import SheltersAdmin from './pages/admin/SheltersAdmin'
+import ContactsPage from './pages/ContactsPage'
 
 const queryClient = new QueryClient()
 
@@ -36,6 +37,7 @@ function AppRoutes() {
       <Route path="/admin/sos" element={<ProtectedRoute adminOnly><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
       <Route path="/admin/shelters" element={<ProtectedRoute adminOnly><Layout><SheltersAdmin /></Layout></ProtectedRoute>} />
       <Route path="/" element={<Navigate to={user ? "/map" : "/login"} replace />} />
+      <Route path="/contacts" element={<ProtectedRoute><Layout><ContactsPage /></Layout></ProtectedRoute>} />
     </Routes>
   )
 }

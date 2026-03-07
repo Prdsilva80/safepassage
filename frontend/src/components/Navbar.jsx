@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Shield, Map, AlertTriangle, Home, LogOut, Users, Menu, X } from 'lucide-react'
+import { Shield, Map, AlertTriangle, Home, LogOut, Users, Menu, X, Phone } from 'lucide-react'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -18,6 +18,7 @@ export default function Navbar() {
     { to: '/civil', icon: <Home size={15} />, label: 'CIVILIAN', always: true },
     { to: '/admin', icon: <Users size={15} />, label: 'ADMIN', adminOnly: true },
     { to: '/admin/sos', icon: <AlertTriangle size={15} />, label: 'SOS', adminOnly: true },
+    { to: '/contacts', icon: <Phone size={15} />, label: 'CONTACTS', always: true },
   ].filter(l => l.always || (l.adminOnly && isAdmin))
 
   return (
