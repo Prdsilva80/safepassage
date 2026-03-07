@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_AI: str = "10/minute"
     WS_HEARTBEAT_INTERVAL: int = 30
     WS_MAX_CONNECTIONS_PER_ZONE: int = 10000
+    vonage_api_key: str = ""
+    vonage_api_secret: str = ""
+    vonage_from: str = "SafePassage"
+    alert_phone: str = ""
 
     @field_validator("SECRET_KEY")
     @classmethod

@@ -63,10 +63,10 @@ export default function Register() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--mono)', letterSpacing: 1 }}>ROLE</label>
             <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-              <option value="civilian">CIVILIAN</option>
-              <option value="ngo_worker">NGO WORKER</option>
-              <option value="journalist">JOURNALIST</option>
-              <option value="medical">MEDICAL</option>
+              <option value="CIVILIAN">CIVILIAN</option>
+              <option value="NGO_WORKER">NGO WORKER</option>
+              <option value="ADMIN">ADMIN</option>
+              <option value="JOURNALIST">JOURNALIST</option>
             </select>
           </div>
 

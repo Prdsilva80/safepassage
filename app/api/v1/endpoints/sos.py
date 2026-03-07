@@ -8,20 +8,61 @@ from app.db.database import get_db
 from app.models.models import SOSEvent, SOSStatus, User
 from app.schemas.schemas import SOSCreateRequest, SOSResponse
 from app.services.alert_manager import alert_manager
+from app.services.sms_service import send_sos_sms
+import asyncio
 
 router = APIRouter()
 
 @router.post("/", response_model=SOSResponse, status_code=201)
-async def trigger_sos(body: SOSCreateRequest, db: AsyncSession = Depends(get_db), user: User | None = Depends(get_current_user)):
-    sos = SOSEvent(user_id=user.id if user else None, status=SOSStatus.ACTIVE, lat=body.lat, lng=body.lng, message=body.message, people_count=body.people_count, has_injured=body.has_injured, has_children=body.has_children, notified_orgs=[])
+async def trigger_sos(
+    body: SOSCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_current_user)
+):
+    sos = SOSEvent(
+        user_id=user.id if user else None,
+        status=SOSStatus.ACTIVE,
+        lat=body.lat,
+        lng=body.lng,
+        message=body.message,
+        people_count=body.people_count,
+        has_injured=body.has_injured,
+        has_children=body.has_children,
+        notified_orgs=[],
+    )
     db.add(sos)
     await db.flush()
-    reached = await alert_manager.broadcast_sos(sos_id=sos.id, lat=body.lat, lng=body.lng, message=body.message, people_count=body.people_count, has_injured=body.has_injured)
+
+    reached = await alert_manager.broadcast_sos(
+        sos_id=sos.id,
+        lat=body.lat,
+        lng=body.lng,
+        message=body.message,
+        people_count=body.people_count,
+        has_injured=body.has_injured,
+    )
     sos.alerts_sent = reached
+
+    # SMS alert via Vonage
+    asyncio.create_task(asyncio.to_thread(
+        send_sos_sms,
+        body.lat,
+        body.lng,
+        body.people_count,
+        body.message or "",
+        body.has_injured,
+        body.has_children,
+    ))
+
     return sos
 
 @router.patch("/{sos_id}/acknowledge", response_model=SOSResponse)
-async def acknowledge_sos(sos_id: UUID, org_name: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_ngo_or_admin)):
+async def acknowledge_sos(
+    sos_id: UUID,
+    org_name: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_ngo_or_admin),
+):
     result = await db.execute(select(SOSEvent).where(SOSEvent.id == sos_id))
     sos = result.scalar_one_or_none()
     if not sos:
@@ -33,7 +74,12 @@ async def acknowledge_sos(sos_id: UUID, org_name: str, db: AsyncSession = Depend
     return sos
 
 @router.patch("/{sos_id}/resolve", response_model=SOSResponse)
-async def resolve_sos(sos_id: UUID, resolution_notes: str = "", db: AsyncSession = Depends(get_db), user: User = Depends(get_ngo_or_admin)):
+async def resolve_sos(
+    sos_id: UUID,
+    resolution_notes: str = "",
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_ngo_or_admin),
+):
     result = await db.execute(select(SOSEvent).where(SOSEvent.id == sos_id))
     sos = result.scalar_one_or_none()
     if not sos:
@@ -45,6 +91,13 @@ async def resolve_sos(sos_id: UUID, resolution_notes: str = "", db: AsyncSession
     return sos
 
 @router.get("/active", response_model=list[SOSResponse])
-async def list_active_sos(db: AsyncSession = Depends(get_db), user: User = Depends(get_ngo_or_admin)):
-    result = await db.execute(select(SOSEvent).where(SOSEvent.status == SOSStatus.ACTIVE).order_by(SOSEvent.created_at.desc()))
+async def list_active_sos(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_ngo_or_admin),
+):
+    result = await db.execute(
+        select(SOSEvent)
+        .where(SOSEvent.status == SOSStatus.ACTIVE)
+        .order_by(SOSEvent.created_at.desc())
+    )
     return result.scalars().all()

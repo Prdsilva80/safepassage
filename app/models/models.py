@@ -37,10 +37,10 @@ from app.db.database import Base
 # ── Enums ─────────────────────────────────────────────────────────────────────
 
 class UserRole(str, enum.Enum):
-    CIVILIAN = "civilian"
-    NGO_WORKER = "ngo_worker"
-    ADMIN = "admin"
-    JOURNALIST = "journalist"
+    CIVILIAN = "CIVILIAN"
+    NGO_WORKER = "NGO_WORKER"
+    ADMIN = "ADMIN"
+    JOURNALIST = "JOURNALIST"
 
 
 class ReportType(str, enum.Enum):

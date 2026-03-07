@@ -13,6 +13,7 @@ class UserRegisterRequest(BaseModel):
     language: str = "en"
     phone: str | None = None
     is_anonymous: bool = False
+    role: str = "CIVILIAN"
 
 class UserLoginRequest(BaseModel):
     username: str
