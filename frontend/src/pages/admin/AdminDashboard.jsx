@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { zonesAPI, reportsAPI, sheltersAPI, sosAPI } from '../../services/api'
+import { zonesAPI, sosAPI } from '../../services/api'
 import { AlertTriangle, MapPin, Home, Activity } from 'lucide-react'
 
 function StatCard({ label, value, color, icon }) {

@@ -193,6 +193,7 @@ class RouteResponse(BaseModel):
 # ── SOS ───────────────────────────────────────────────────────────────────────
 
 class SOSCreateRequest(BaseModel):
+    language: str = "auto"
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
     message: str | None = None

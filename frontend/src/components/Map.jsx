@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -15,7 +15,7 @@ function LocationMarker({ onLocationFound }) {
   useEffect(() => {
     map.locate({ setView: true, maxZoom: 12 })
     map.on('locationfound', (e) => onLocationFound?.(e.latlng))
-  }, [map])
+  }, [map, onLocationFound])
   return null
 }
 

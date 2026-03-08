@@ -9,6 +9,7 @@ from app.models.models import SOSEvent, SOSStatus, User
 from app.schemas.schemas import SOSCreateRequest, SOSResponse
 from app.services.alert_manager import alert_manager
 from app.services.sms_service import send_sos_sms
+from app.services.translation_service import to_english
 import asyncio
 
 router = APIRouter()
@@ -19,12 +20,17 @@ async def trigger_sos(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_current_user)
 ):
+    # Translate message to English for NGO/admin review
+    original_message = body.message or ""
+    source_lang = body.language if hasattr(body, 'language') else "auto"
+    message_en = await to_english(original_message, source_lang) if original_message else ""
+
     sos = SOSEvent(
         user_id=user.id if user else None,
         status=SOSStatus.ACTIVE,
         lat=body.lat,
         lng=body.lng,
-        message=body.message,
+        message=message_en,           # stored in English
         people_count=body.people_count,
         has_injured=body.has_injured,
         has_children=body.has_children,
@@ -37,23 +43,21 @@ async def trigger_sos(
         sos_id=sos.id,
         lat=body.lat,
         lng=body.lng,
-        message=body.message,
+        message=message_en,
         people_count=body.people_count,
         has_injured=body.has_injured,
     )
     sos.alerts_sent = reached
 
-    # SMS alert via Vonage
     asyncio.create_task(asyncio.to_thread(
         send_sos_sms,
         body.lat,
         body.lng,
         body.people_count,
-        body.message or "",
+        message_en,
         body.has_injured,
         body.has_children,
     ))
-
     return sos
 
 @router.patch("/{sos_id}/acknowledge", response_model=SOSResponse)

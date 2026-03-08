@@ -109,7 +109,7 @@ export default function MapPage() {
   const [reports, setReports] = useState([])
   const [shelters, setShelters] = useState([])
   const [location, setLocation] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [, setLoading] = useState(false)
   const [radius, setRadius] = useState(50)
   const [clickedLatlng, setClickedLatlng] = useState(null)
   const [mapCenter, setMapCenter] = useState([48.5, 31.2])
@@ -137,7 +137,7 @@ export default function MapPage() {
       },
       () => fetchData(48.5, 31.2)
     )
-  }, [])
+  }, [fetchData])
 
   const DANGER_COUNTS = ['critical','high','medium','low'].reduce((acc, l) => {
     acc[l] = reports.filter(r => r.danger_level === l).length; return acc

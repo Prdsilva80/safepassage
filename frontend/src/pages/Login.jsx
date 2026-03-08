@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTranslation } from 'react-i18next'
 import { Shield, AlertTriangle } from 'lucide-react'
+import LanguageSelector from '../components/LanguageSelector'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -10,6 +12,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const { login, loginAnonymous } = useAuth()
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -18,7 +21,7 @@ export default function Login() {
       await login(username, password)
       navigate('/map')
     } catch {
-      setError('Invalid credentials')
+      setError(t('login.invalid_credentials'))
     } finally { setLoading(false) }
   }
 
@@ -27,7 +30,7 @@ export default function Login() {
     try {
       await loginAnonymous()
       navigate('/civil')
-    } catch { setError('Failed to create anonymous session') }
+    } catch { setError(t('login.anon_failed')) }
     finally { setLoading(false) }
   }
 
@@ -40,27 +43,35 @@ export default function Login() {
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <Shield size={48} color="var(--red)" />
           <h1 style={{ fontFamily: 'var(--mono)', fontSize: 24, letterSpacing: 4, marginTop: 12, color: 'var(--red)' }}>
-            SAFEPASSAGE
+            {t('login.title')}
           </h1>
           <p style={{ color: 'var(--text2)', marginTop: 8, fontSize: 12, letterSpacing: 2 }}>
-            HUMANITARIAN SAFETY SYSTEM
+            {t('login.subtitle')}
           </p>
+          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+            <LanguageSelector />
+          </div>
         </div>
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <input
-            placeholder="USERNAME"
+            placeholder={t('login.username')}
             value={username}
             onChange={e => setUsername(e.target.value)}
             style={{ fontFamily: 'var(--mono)', letterSpacing: 1 }}
           />
           <input
             type="password"
-            placeholder="PASSWORD"
+            placeholder={t('login.password')}
             value={password}
             onChange={e => setPassword(e.target.value)}
             style={{ fontFamily: 'var(--mono)', letterSpacing: 1 }}
           />
+
+          <p style={{ textAlign: 'center', fontSize: 12, marginTop: -4 }}>
+            {t('login.no_account')}{' '}
+            <a href="/register" style={{ color: 'var(--red)' }}>{t('login.register')}</a>
+          </p>
 
           {error && (
             <div style={{ color: 'var(--red)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -71,16 +82,15 @@ export default function Login() {
           <button type="submit" disabled={loading} style={{
             background: 'var(--red)', color: '#fff', padding: '12px',
             fontFamily: 'var(--mono)', letterSpacing: 2, fontSize: 13,
-            borderRadius: 4, marginTop: 8,
-            opacity: loading ? 0.7 : 1,
+            borderRadius: 4, marginTop: 8, opacity: loading ? 0.7 : 1,
           }}>
-            {loading ? 'CONNECTING...' : 'LOGIN'}
+            {loading ? t('login.connecting') : t('login.login')}
           </button>
         </form>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          <span style={{ color: 'var(--text2)', fontSize: 11, fontFamily: 'var(--mono)' }}>OR</span>
+          <span style={{ color: 'var(--text2)', fontSize: 11, fontFamily: 'var(--mono)' }}>{t('login.or')}</span>
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         </div>
 
@@ -89,17 +99,13 @@ export default function Login() {
           padding: '12px', fontFamily: 'var(--mono)', letterSpacing: 2,
           fontSize: 12, borderRadius: 4, border: '1px solid var(--border)',
         }}>
-          ENTER AS ANONYMOUS CIVILIAN
+          {t('login.anonymous')}
         </button>
 
         <p style={{ color: 'var(--text2)', fontSize: 11, textAlign: 'center', marginTop: 24, lineHeight: 1.8 }}>
-          Anonymous access provides immediate safety information<br />without registration required.
+          {t('login.anonymous_desc')}
         </p>
       </div>
-      <p style={{ color: 'var(--text2)', fontSize: 12, textAlign: 'center', marginTop: 16 }}>
-        Don't have an account?{' '}
-        <a href="/register" style={{ color: 'var(--red)' }}>REGISTER</a>
-      </p>
     </div>
   )
 }

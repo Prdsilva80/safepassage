@@ -1,5 +1,4 @@
 services:
-
   api:
     build: .
     container_name: safepassage_api
@@ -13,7 +12,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks: [safepassage]
-
   postgres:
     image: postgres:16-alpine
     container_name: safepassage_postgres
@@ -33,7 +31,6 @@ services:
       start_period: 60s
     restart: unless-stopped
     networks: [safepassage]
-
   redis:
     image: redis:7-alpine
     container_name: safepassage_redis
@@ -50,11 +47,19 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks: [safepassage]
-
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: safepassage_translate
+    ports:
+      - "5000:5000"
+    environment:
+      - LT_LOAD_ONLY=en,ar,uk,fr,es,pt
+      - LT_DISABLE_WEB_UI=false
+    restart: unless-stopped
+    networks: [safepassage]
 volumes:
   postgres_data:
   redis_data:
-
 networks:
   safepassage:
     driver: bridge
