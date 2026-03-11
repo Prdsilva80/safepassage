@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     vonage_api_secret: str = ""
     vonage_from: str = "SafePassage"
     alert_phone: str = ""
+    acled_token: str = ""
+    acled_email: str = ""
+    reliefweb_appname: str = "PRoberto-SafePassagehumanitariansafety-sp80"
+    firms_map_key: str = ""
 
     @field_validator("SECRET_KEY")
     @classmethod
@@ -59,3 +63,5 @@ def get_settings() -> Settings:
     return Settings()
 
 settings = get_settings()
+# Patch: adicionar campos em falta ao Settings
+# Executar uma vez para corrigir o config
