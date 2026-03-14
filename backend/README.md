@@ -28,7 +28,7 @@ SafePassage provides:
 ## Technology Stack
 
 | Layer | Technology |
-|---|---|
+| --- | --- |
 | Backend | Python 3.12 · FastAPI (async) |
 | Database | PostgreSQL 16 · SQLAlchemy 2.0 async |
 | Cache / Pub-Sub | Redis 7 |
@@ -79,7 +79,7 @@ WebSocket alert broadcasting
 SafePassage aggregates data from 4 independent sources to calculate a composite danger score:
 
 | Source | Type | Update Frequency | Used For |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) | Satellite (VIIRS/MODIS) | ~minutes | Heat anomalies, explosions, fires |
 | [ReliefWeb](https://reliefweb.int/) | Humanitarian reports | Daily | Crisis reports, disaster alerts |
 | [GDELT](https://www.gdeltproject.org/) | News events (300+ categories) | 15 minutes | Conflict signals, protests, attacks |
@@ -98,7 +98,7 @@ GET /api/v1/danger/score?lat=48.5&lng=31.2&radius_km=50
 **Score breakdown:**
 
 | Source | Max Score | Criteria |
-|---|---|---|
+| --- | --- | --- |
 | NASA FIRMS | +3 | Hotspots in last 3 days within radius |
 | ReliefWeb | +2 | Recent humanitarian reports for region |
 | GDELT | +2 | Conflict events in last 24h |
@@ -142,6 +142,7 @@ See [docs/danger_engine.md](docs/danger_engine.md) for full algorithm documentat
 ## User Roles
 
 ### 👤 Civilian
+
 - Submit incident reports
 - Trigger SOS alerts with GPS location
 - Request AI evacuation plans
@@ -151,12 +152,14 @@ See [docs/danger_engine.md](docs/danger_engine.md) for full algorithm documentat
 - Use app in native language (8 languages)
 
 ### 🏥 NGO / Humanitarian Organisations
+
 - Manage shelters and capacity
 - Respond to SOS alerts
 - Access emergency contacts directory
 - Coordinate evacuations
 
 ### 🔧 Administrator
+
 - Manage conflict zones
 - Monitor system alerts
 - Moderate reports
@@ -220,6 +223,7 @@ safepassage/
 ## Quick Start
 
 ### Prerequisites
+
 - Docker + Docker Compose
 - Node.js 18+
 
@@ -248,10 +252,10 @@ docker compose up --build
 ```
 
 | Service | URL |
-|---|---|
-| API | http://localhost:8000 |
-| Swagger docs | http://localhost:8000/docs |
-| LibreTranslate | http://localhost:5000 |
+| --- | --- |
+| API | <http://localhost:8000> |
+| Swagger docs | <http://localhost:8000/docs> |
+| LibreTranslate | <http://localhost:5000> |
 
 ### 3. Seed emergency contacts
 
@@ -267,7 +271,7 @@ npm install
 npm run dev
 ```
 
-App runs at: **http://localhost:5173**
+App runs at: **<http://localhost:5173>**
 
 ---
 
@@ -276,7 +280,7 @@ App runs at: **http://localhost:5173**
 ### Authentication
 
 | Method | Path | Description |
-|---|---|---|
+| --- | --- | --- |
 | POST | `/api/v1/auth/register` | Register new user |
 | POST | `/api/v1/auth/anonymous` | Anonymous session |
 | POST | `/api/v1/auth/login` | Login |
@@ -285,7 +289,7 @@ App runs at: **http://localhost:5173**
 ### NASA FIRMS (Satellite)
 
 | Method | Path | Description |
-|---|---|---|
+| --- | --- | --- |
 | GET | `/api/v1/firms/hotspots` | Hotspots by country |
 | GET | `/api/v1/firms/hotspots/bbox` | Hotspots by bounding box |
 
@@ -294,21 +298,21 @@ App runs at: **http://localhost:5173**
 ### Danger Score
 
 | Method | Path | Description |
-|---|---|---|
+| --- | --- | --- |
 | GET | `/api/v1/danger/score` | Composite danger score for location |
 | GET | `/api/v1/danger/grid` | Danger score grid (heatmap) |
 
 ### Intelligence
 
 | Method | Path | Description |
-|---|---|---|
+| --- | --- | --- |
 | GET | `/api/v1/intelligence/reports` | ReliefWeb humanitarian reports |
 | GET | `/api/v1/intelligence/disasters` | ReliefWeb disaster alerts |
 
 ### Reports · Shelters · SOS · AI
 
 | Method | Path | Description |
-|---|---|---|
+| --- | --- | --- |
 | POST | `/api/v1/reports/` | Submit incident report |
 | GET | `/api/v1/reports/nearby` | Nearby reports |
 | GET | `/api/v1/shelters/nearby` | Find nearby shelters |
@@ -327,7 +331,7 @@ ws://localhost:8000/api/v1/ws/connect?lat=48.5&lng=31.2&user_id=<uuid>
 ## Multilingual Support
 
 | Code | Language | Translation |
-|---|---|---|
+| --- | --- | --- |
 | en | English | Native |
 | uk | Ukrainian | LibreTranslate |
 | ar | Arabic | LibreTranslate |
