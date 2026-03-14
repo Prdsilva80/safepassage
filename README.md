@@ -41,6 +41,39 @@ SafePassage provides:
 
 ---
 
+## System Architecture
+
+```
+Users (Mobile / Web)
+        │
+        ▼
+Frontend (React + Leaflet + i18n)
+        │
+        ▼
+FastAPI Backend
+        │
+──────────────── Data Layer ────────────────
+        │                   │
+   PostgreSQL             Redis
+  (persistent)         (pub/sub)
+──────────────── Intelligence ──────────────
+        │
+   ┌────┴────────────────────────┐
+   │         │         │         │
+NASA FIRMS  ReliefWeb  GDELT    UCDP
+(satellite) (reports) (news)  (history)
+──────────────── AI Layer ──────────────────
+        │
+   Anthropic Claude
+   (evacuation plans)
+────────────────────────────────────────────
+        │
+        ▼
+WebSocket alert broadcasting
+```
+
+---
+
 ## Intelligence Sources
 
 SafePassage aggregates data from 4 independent sources to calculate a composite danger score:
@@ -80,6 +113,10 @@ GET /api/v1/danger/score?lat=48.5&lng=31.2&radius_km=50
 7–8  → CRITICAL
 ```
 
+> **Design principle:** The danger score is intentionally conservative.
+> Multiple independent signals are required to reach HIGH or CRITICAL levels.
+> This avoids false positives that could cause unnecessary panic or dangerous decisions.
+
 **Example response:**
 
 ```json
@@ -98,34 +135,7 @@ GET /api/v1/danger/score?lat=48.5&lng=31.2&radius_km=50
 }
 ```
 
----
-
-## System Architecture
-
-```
-Users (Mobile / Web)
-        ↓
-React Frontend (Leaflet Map + i18n)
-        ↓
-FastAPI Backend
-        ↓
-─────────────────────────────────────────
-PostgreSQL     (persistent data)
-Redis          (real-time pub/sub)
-LibreTranslate (self-hosted translation)
-─────────────────────────────────────────
-        ↓
-External Intelligence APIs
-─────────────────────────────────────────
-NASA FIRMS    (satellite hotspots)
-ReliefWeb     (humanitarian reports)
-GDELT         (news event stream)
-UCDP          (conflict history)
-─────────────────────────────────────────
-        ↓
-AI Engine (Anthropic Claude)
-WebSocket alert broadcasting
-```
+See [docs/danger_engine.md](docs/danger_engine.md) for full algorithm documentation.
 
 ---
 
@@ -161,45 +171,33 @@ safepassage/
 ├── app/                           # FastAPI backend
 │   ├── main.py
 │   ├── core/
-│   │   ├── config.py              # Settings (pydantic-settings + .env)
-│   │   └── security.py            # JWT, password hashing, auth dependencies
+│   │   ├── config.py
+│   │   └── security.py
 │   ├── db/
-│   │   ├── database.py            # Async SQLAlchemy engine + session
-│   │   └── seed_contacts.py       # Emergency contacts seed data
+│   │   ├── database.py
+│   │   └── seed_contacts.py
 │   ├── models/
-│   │   └── models.py              # ORM models
+│   │   └── models.py
 │   ├── schemas/
-│   │   └── schemas.py             # Pydantic schemas
+│   │   └── schemas.py
 │   ├── services/
-│   │   ├── geo_service.py         # Geospatial calculations
-│   │   ├── alert_manager.py       # WebSocket manager + Redis pub/sub
-│   │   ├── firms_service.py       # NASA FIRMS satellite integration
-│   │   ├── reliefweb_service.py   # ReliefWeb humanitarian reports
-│   │   ├── gdelt_service.py       # GDELT news event stream
+│   │   ├── firms_service.py       # NASA FIRMS satellite
+│   │   ├── reliefweb_service.py   # ReliefWeb reports
+│   │   ├── gdelt_service.py       # GDELT news events
 │   │   ├── ucdp_service.py        # UCDP conflict history
 │   │   ├── danger_score_service.py# Composite danger score engine
-│   │   ├── translation_service.py # LibreTranslate integration
-│   │   └── sms_service.py         # Vonage SMS alerts
+│   │   ├── translation_service.py # LibreTranslate
+│   │   ├── sms_service.py         # Vonage SMS
+│   │   ├── geo_service.py
+│   │   └── alert_manager.py
 │   └── api/v1/
-│       ├── router.py
 │       └── endpoints/
-│           ├── auth.py
-│           ├── zones.py
-│           ├── reports.py
-│           ├── shelters.py
-│           ├── routes.py
-│           ├── sos.py
-│           ├── ai.py
-│           ├── alerts.py
-│           ├── ws.py
-│           ├── firms.py           # NASA FIRMS endpoints
-│           ├── intelligence.py    # ReliefWeb endpoints
-│           ├── contacts.py        # Emergency contacts
-│           └── danger.py          # Danger score endpoints
-├── frontend/                      # React 18 + Vite frontend
+│           ├── auth.py · zones.py · reports.py · shelters.py
+│           ├── routes.py · sos.py · ai.py · alerts.py · ws.py
+│           ├── firms.py · intelligence.py · contacts.py · danger.py
+├── frontend/                      # React 18 + Vite
 │   └── src/
-│       ├── i18n/                  # Multilingual support
-│       │   └── locales/           # EN, UK, AR, FR, ES, PT, PT-BR
+│       ├── i18n/locales/          # EN, UK, AR, FR, ES, PT, PT-BR
 │       ├── components/
 │       │   ├── Navbar.jsx
 │       │   └── LanguageSelector.jsx
@@ -208,9 +206,12 @@ safepassage/
 │           ├── CivilPage.jsx
 │           ├── ContactsPage.jsx
 │           └── AdminDashboard.jsx
+├── docs/
+│   ├── architecture.md
+│   ├── danger_engine.md
+│   └── data_sources.md
 ├── Dockerfile
 ├── docker-compose.yml
-├── docker-compose.prod.yml
 └── .env.example
 ```
 
@@ -225,7 +226,7 @@ safepassage/
 ### 1. Clone repository
 
 ```bash
-git clone https://github.com/Prdsilva80/safepassanger
+git clone https://github.com/Prdsilva80/safepassage
 cd safepassage
 cp .env.example .env
 ```
@@ -281,31 +282,6 @@ App runs at: **http://localhost:5173**
 | POST | `/api/v1/auth/login` | Login |
 | GET | `/api/v1/auth/me` | Get user profile |
 
-### Reports
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/v1/reports/` | Submit incident report |
-| GET | `/api/v1/reports/nearby` | Retrieve nearby reports |
-| POST | `/api/v1/reports/{id}/confirm` | Confirm / contradict report |
-
-### Shelters
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/v1/shelters/nearby` | Find nearby shelters |
-| POST | `/api/v1/shelters/` | Create shelter (NGO only) |
-| PATCH | `/api/v1/shelters/{id}` | Update shelter capacity |
-
-### SOS
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/v1/sos/` | Trigger SOS |
-| PATCH | `/api/v1/sos/{id}/acknowledge` | NGO acknowledges |
-| PATCH | `/api/v1/sos/{id}/resolve` | Resolve emergency |
-| GET | `/api/v1/sos/active` | Active SOS incidents |
-
 ### NASA FIRMS (Satellite)
 
 | Method | Path | Description |
@@ -315,13 +291,6 @@ App runs at: **http://localhost:5173**
 
 **Supported conflict zones:** Ukraine, Gaza, Sudan, Syria, Yemen, Iran, Iraq, Lebanon, Myanmar, Somalia, Ethiopia
 
-### Intelligence
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/v1/intelligence/reports` | ReliefWeb humanitarian reports |
-| GET | `/api/v1/intelligence/disasters` | ReliefWeb disaster alerts |
-
 ### Danger Score
 
 | Method | Path | Description |
@@ -329,18 +298,22 @@ App runs at: **http://localhost:5173**
 | GET | `/api/v1/danger/score` | Composite danger score for location |
 | GET | `/api/v1/danger/grid` | Danger score grid (heatmap) |
 
-### Emergency Contacts
+### Intelligence
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/v1/contacts/` | List emergency contacts |
+| GET | `/api/v1/intelligence/reports` | ReliefWeb humanitarian reports |
+| GET | `/api/v1/intelligence/disasters` | ReliefWeb disaster alerts |
 
-**Pre-seeded organisations:** ICRC, UNHCR, MSF, IRC, OCHA
-
-### AI
+### Reports · Shelters · SOS · AI
 
 | Method | Path | Description |
 |---|---|---|
+| POST | `/api/v1/reports/` | Submit incident report |
+| GET | `/api/v1/reports/nearby` | Nearby reports |
+| GET | `/api/v1/shelters/nearby` | Find nearby shelters |
+| POST | `/api/v1/sos/` | Trigger SOS |
+| GET | `/api/v1/contacts/` | Emergency contacts |
 | POST | `/api/v1/ai/risk-assessment` | AI evacuation plan |
 
 ### WebSocket
@@ -353,9 +326,7 @@ ws://localhost:8000/api/v1/ws/connect?lat=48.5&lng=31.2&user_id=<uuid>
 
 ## Multilingual Support
 
-SafePassage supports 8 languages with automatic detection:
-
-| Code | Language | Translation Engine |
+| Code | Language | Translation |
 |---|---|---|
 | en | English | Native |
 | uk | Ukrainian | LibreTranslate |
@@ -365,47 +336,57 @@ SafePassage supports 8 languages with automatic detection:
 | pt | Portuguese | LibreTranslate |
 | pt-BR | Brazilian Portuguese | LibreTranslate |
 
-SOS messages are automatically translated to English for NGO/admin review, and AI responses are translated back to the civilian's language.
+SOS messages are automatically translated to English for NGO/admin review. AI responses are translated back to the civilian's language.
 
 ---
 
 ## Map Features
 
-The interactive Leaflet map includes:
-
-- 🛰️ **SAT layer** — NASA FIRMS satellite hotspots, colour-coded by intensity (FRP/brightness)
+- 🛰️ **SAT layer** — NASA FIRMS satellite hotspots, colour-coded by FRP intensity
 - 🔴 **RPT layer** — Civilian incident reports, colour-coded by danger level
 - 🟢 **SHL layer** — Nearby shelters with capacity info
-- Layer toggles — each layer can be shown/hidden independently
-- Country selector for FIRMS data (1–7 day range)
-- Legend with intensity scale
+- Layer toggles, country selector, 1–7 day range, intensity legend
 
 ---
 
 ## Environment Variables
 
 ```env
-# Core
 SECRET_KEY=                    # min 32 chars
 ENVIRONMENT=development
-
-# Database
 DATABASE_URL=postgresql://safepassage:safepassage_dev@postgres:5432/safepassage
-
-# Redis
 REDIS_URL=redis://redis:6379/0
-
-# AI
 ANTHROPIC_API_KEY=
-
-# NASA FIRMS (free registration)
-FIRMS_MAP_KEY=                 # firms.modaps.eosdis.nasa.gov/api/map_key/
-
-# SMS (optional)
+FIRMS_MAP_KEY=
 VONAGE_API_KEY=
 VONAGE_API_SECRET=
 VONAGE_FROM=SafePassage
 ```
+
+---
+
+## Roadmap
+
+Planned improvements:
+
+- [ ] Offline mesh communication (Bluetooth / LoRa)
+- [ ] Mobile application (React Native)
+- [ ] Satellite imagery change detection
+- [ ] Shelter supply tracking
+- [ ] NGO coordination dashboard
+- [ ] PWA with offline support (Service Workers)
+- [ ] Push notifications (FCM)
+- [ ] HDX/HAPI humanitarian data integration
+- [ ] Multi-language support (40+ languages)
+- [ ] Mesh networking via WebRTC for low-connectivity zones
+
+---
+
+## Documentation
+
+- [docs/architecture.md](docs/architecture.md) — System architecture deep dive
+- [docs/danger_engine.md](docs/danger_engine.md) — Danger score algorithm
+- [docs/data_sources.md](docs/data_sources.md) — Intelligence sources guide
 
 ---
 
@@ -423,8 +404,6 @@ Contributions from developers, NGOs and humanitarian organisations are welcome.
 1. Fork the repository
 2. Create a feature branch
 3. Submit a pull request
-
-All contributions should follow the existing architecture and coding style.
 
 ---
 
