@@ -1,11 +1,19 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { reportsAPI, sheltersAPI } from '../services/api'
-import { RefreshCw, X, AlertTriangle } from 'lucide-react'
+import { RefreshCw, X, AlertTriangle, Flame } from 'lucide-react'
 
 const DANGER_COLORS = {
   critical: '#ff2b2b', high: '#ff6600', medium: '#ffb800', low: '#00cc66', safe: '#0088ff',
+}
+
+// Cor e raio do hotspot baseado no FRP (Fire Radiative Power em MW)
+function frpStyle(frp, brightness) {
+  if (frp > 50 || brightness > 400)  return { color: '#ff2b2b', radius: 10, opacity: 0.9 }
+  if (frp > 20 || brightness > 360)  return { color: '#ff6600', radius: 8,  opacity: 0.8 }
+  if (frp > 5  || brightness > 330)  return { color: '#ffb800', radius: 6,  opacity: 0.7 }
+  return                                    { color: '#ff8c00', radius: 4,  opacity: 0.5 }
 }
 
 function ClickHandler({ onMapClick }) {
@@ -106,13 +114,22 @@ function ReportModal({ latlng, onClose, onSubmit }) {
 }
 
 export default function MapPage() {
-  const [reports, setReports] = useState([])
-  const [shelters, setShelters] = useState([])
-  const [location, setLocation] = useState(null)
-  const [, setLoading] = useState(false)
-  const [radius, setRadius] = useState(50)
+  const [reports, setReports]       = useState([])
+  const [shelters, setShelters]     = useState([])
+  const [hotspots, setHotspots]     = useState([])
+  const [location, setLocation]     = useState(null)
+  const [, setLoading]              = useState(false)
+  const [firmsLoading, setFirmsLoading] = useState(false)
+  const [radius, setRadius]         = useState(50)
   const [clickedLatlng, setClickedLatlng] = useState(null)
-  const [mapCenter, setMapCenter] = useState([48.5, 31.2])
+  const [mapCenter, setMapCenter]   = useState([48.5, 31.2])
+
+  // Layers toggle
+  const [showReports,   setShowReports]   = useState(true)
+  const [showShelters,  setShowShelters]  = useState(true)
+  const [showFIRMS,     setShowFIRMS]     = useState(true)
+  const [firmsDays,     setFirmsDays]     = useState(1)
+  const [firmsCountry,  setFirmsCountry]  = useState('Ukraine')
 
   const fetchData = useCallback(async (lat, lng) => {
     setLoading(true)
@@ -127,6 +144,18 @@ export default function MapPage() {
     finally { setLoading(false) }
   }, [radius])
 
+  const fetchFIRMS = useCallback(async () => {
+    setFirmsLoading(true)
+    try {
+      const res = await fetch(
+        `/api/v1/firms/hotspots?country=${firmsCountry}&days=${firmsDays}`
+      )
+      const data = await res.json()
+      setHotspots(data.hotspots || [])
+    } catch (e) { console.error('FIRMS error:', e) }
+    finally { setFirmsLoading(false) }
+  }, [firmsCountry, firmsDays])
+
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -139,12 +168,17 @@ export default function MapPage() {
     )
   }, [fetchData])
 
+  useEffect(() => { fetchFIRMS() }, [fetchFIRMS])
+
   const DANGER_COUNTS = ['critical','high','medium','low'].reduce((acc, l) => {
     acc[l] = reports.filter(r => r.danger_level === l).length; return acc
   }, {})
 
+  const FIRMS_COUNTRIES = ['Ukraine','Gaza','Sudan','Syria','Yemen','Myanmar','Somalia','Ethiopia']
+
   return (
     <div style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
+
       {/* Toolbar */}
       <div style={{
         background: 'var(--bg2)', borderBottom: '1px solid var(--border)',
@@ -153,32 +187,87 @@ export default function MapPage() {
         <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text2)' }}>
           {reports.length} REPORTS · {shelters.length} SHELTERS
         </span>
+        {hotspots.length > 0 && (
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#ff6600' }}>
+            · 🛰 {hotspots.length} FIRMS
+          </span>
+        )}
         <span style={{ fontSize: 10, color: 'var(--text2)', marginLeft: 4 }}>· CLICK MAP TO REPORT</span>
 
         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Danger counts */}
           {Object.entries(DANGER_COUNTS).map(([level, count]) => count > 0 && (
             <span key={level} style={{
               fontSize: 10, fontFamily: 'var(--mono)', padding: '2px 6px', borderRadius: 2,
-              background: 'var(--bg3)',
-              color: DANGER_COLORS[level] || 'var(--text2)',
+              background: 'var(--bg3)', color: DANGER_COLORS[level] || 'var(--text2)',
             }}>{level.toUpperCase()}: {count}</span>
           ))}
-          <select value={radius} onChange={e => setRadius(Number(e.target.value))}
-            style={{ width: 'auto', padding: '4px 6px', fontSize: 10, fontFamily: 'var(--mono)' }}>
-            {[10,25,50,100].map(r => <option key={r} value={r}>{r}km</option>)}
-          </select>
-          <button onClick={() => location && fetchData(location.lat, location.lng)} style={{
-            background: 'var(--bg3)', color: 'var(--text)', padding: '4px 10px',
-            border: '1px solid var(--border)', borderRadius: 3,
-            display: 'flex', alignItems: 'center', gap: 4, fontSize: 10,
-          }}>
-            <RefreshCw size={11} /> REFRESH
-          </button>
+
+          {/* Layer toggles */}
+          <div style={{ display: 'flex', gap: 4, borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
+            <button onClick={() => setShowReports(v => !v)} title="Toggle Reports" style={{
+              background: showReports ? 'var(--red)' : 'var(--bg3)',
+              color: showReports ? '#fff' : 'var(--text2)',
+              padding: '3px 7px', borderRadius: 3, fontSize: 10, fontFamily: 'var(--mono)',
+              border: '1px solid var(--border)',
+            }}>RPT</button>
+            <button onClick={() => setShowShelters(v => !v)} title="Toggle Shelters" style={{
+              background: showShelters ? '#00cc66' : 'var(--bg3)',
+              color: showShelters ? '#000' : 'var(--text2)',
+              padding: '3px 7px', borderRadius: 3, fontSize: 10, fontFamily: 'var(--mono)',
+              border: '1px solid var(--border)',
+            }}>SHL</button>
+            <button onClick={() => setShowFIRMS(v => !v)} title="Toggle FIRMS Hotspots" style={{
+              background: showFIRMS ? '#ff6600' : 'var(--bg3)',
+              color: showFIRMS ? '#fff' : 'var(--text2)',
+              padding: '3px 7px', borderRadius: 3, fontSize: 10, fontFamily: 'var(--mono)',
+              border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', gap: 3,
+            }}>
+              <Flame size={10} /> SAT
+            </button>
+          </div>
+
+          {/* FIRMS controls — só visíveis quando SAT activo */}
+          {showFIRMS && (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
+              <select value={firmsCountry} onChange={e => setFirmsCountry(e.target.value)}
+                style={{ width: 'auto', padding: '4px 6px', fontSize: 10, fontFamily: 'var(--mono)' }}>
+                {FIRMS_COUNTRIES.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+              </select>
+              <select value={firmsDays} onChange={e => setFirmsDays(Number(e.target.value))}
+                style={{ width: 'auto', padding: '4px 6px', fontSize: 10, fontFamily: 'var(--mono)' }}>
+                {[1,2,3,5,7].map(d => <option key={d} value={d}>{d}d</option>)}
+              </select>
+              <button onClick={fetchFIRMS} disabled={firmsLoading} style={{
+                background: 'var(--bg3)', color: firmsLoading ? '#ff6600' : 'var(--text)',
+                padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 3,
+                display: 'flex', alignItems: 'center', gap: 4, fontSize: 10,
+              }}>
+                <RefreshCw size={10} style={{ animation: firmsLoading ? 'spin 1s linear infinite' : 'none' }} />
+              </button>
+            </div>
+          )}
+
+          {/* Radius + Refresh */}
+          <div style={{ display: 'flex', gap: 4, borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
+            <select value={radius} onChange={e => setRadius(Number(e.target.value))}
+              style={{ width: 'auto', padding: '4px 6px', fontSize: 10, fontFamily: 'var(--mono)' }}>
+              {[10,25,50,100].map(r => <option key={r} value={r}>{r}km</option>)}
+            </select>
+            <button onClick={() => location && fetchData(location.lat, location.lng)} style={{
+              background: 'var(--bg3)', color: 'var(--text)', padding: '4px 10px',
+              border: '1px solid var(--border)', borderRadius: 3,
+              display: 'flex', alignItems: 'center', gap: 4, fontSize: 10,
+            }}>
+              <RefreshCw size={11} /> REFRESH
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Map */}
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, position: 'relative' }}>
         <MapContainer center={mapCenter} zoom={7} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -186,7 +275,40 @@ export default function MapPage() {
           />
           <ClickHandler onMapClick={setClickedLatlng} />
 
-          {reports.map(r => (
+          {/* FIRMS hotspots — satélite */}
+          {showFIRMS && hotspots.map((h, i) => {
+            const s = frpStyle(h.frp, h.brightness)
+            return (
+              <CircleMarker
+                key={`firms-${i}`}
+                center={[h.latitude, h.longitude]}
+                radius={s.radius}
+                pathOptions={{
+                  color: s.color,
+                  fillColor: s.color,
+                  fillOpacity: s.opacity,
+                  weight: 1,
+                }}
+              >
+                <Popup>
+                  <div style={{ color: '#000', minWidth: 180 }}>
+                    <strong style={{ color: s.color }}>🛰 NASA FIRMS HOTSPOT</strong><br />
+                    <span style={{ fontSize: 11 }}>
+                      <b>Brightness:</b> {h.brightness.toFixed(1)} K<br />
+                      <b>FRP:</b> {h.frp.toFixed(2)} MW<br />
+                      <b>Confidence:</b> {h.confidence === 'h' ? '🟢 High' : h.confidence === 'n' ? '🟡 Nominal' : '🔴 Low'}<br />
+                      <b>Satellite:</b> {h.satellite} (VIIRS)<br />
+                      <b>Time:</b> {h.datetime}<br />
+                      <b>Day/Night:</b> {h.daynight === 'D' ? '☀️ Day' : '🌙 Night'}
+                    </span>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            )
+          })}
+
+          {/* Reports */}
+          {showReports && reports.map(r => (
             <CircleMarker key={r.id} center={[r.lat, r.lng]} radius={8}
               pathOptions={{ color: DANGER_COLORS[r.danger_level] || '#888', fillColor: DANGER_COLORS[r.danger_level] || '#888', fillOpacity: 0.7, weight: 2 }}>
               <Popup>
@@ -200,7 +322,8 @@ export default function MapPage() {
             </CircleMarker>
           ))}
 
-          {shelters.map(s => (
+          {/* Shelters */}
+          {showShelters && shelters.map(s => (
             <CircleMarker key={s.id} center={[s.lat, s.lng]} radius={10}
               pathOptions={{ color: '#00cc66', fillColor: '#00cc66', fillOpacity: 0.8, weight: 2 }}>
               <Popup>
@@ -214,6 +337,30 @@ export default function MapPage() {
             </CircleMarker>
           ))}
         </MapContainer>
+
+        {/* Legenda FIRMS */}
+        {showFIRMS && hotspots.length > 0 && (
+          <div style={{
+            position: 'absolute', bottom: 28, left: 12, zIndex: 1000,
+            background: 'rgba(10,10,10,0.85)', border: '1px solid var(--border)',
+            borderRadius: 6, padding: '8px 12px', fontFamily: 'var(--mono)', fontSize: 10,
+          }}>
+            <div style={{ color: '#ff6600', marginBottom: 6, letterSpacing: 1 }}>
+              🛰 NASA FIRMS · {hotspots.length} DETECTIONS
+            </div>
+            {[
+              { color: '#ff2b2b', label: 'EXTREME  FRP>50MW / >400K' },
+              { color: '#ff6600', label: 'HIGH     FRP>20MW / >360K' },
+              { color: '#ffb800', label: 'MODERATE FRP>5MW  / >330K' },
+              { color: '#ff8c00', label: 'LOW      FRP≤5MW'          },
+            ].map(({ color, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                <span style={{ color: 'var(--text2)' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Report modal */}
@@ -228,6 +375,10 @@ export default function MapPage() {
           }}
         />
       )}
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+      `}</style>
     </div>
   )
 }

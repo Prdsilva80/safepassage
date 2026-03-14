@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import ai, alerts, auth, contacts, firms, intelligence, reports, routes, shelters, sos, zones, ws
+from app.api.v1.endpoints import ai, alerts, auth, contacts, danger, firms, intelligence, reports, routes, shelters, sos, zones, ws
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router,         prefix="/auth",         tags=["Auth"])
@@ -14,3 +14,4 @@ api_router.include_router(ws.router,           prefix="/ws",           tags=["We
 api_router.include_router(contacts.router,     prefix="/contacts",     tags=["Emergency Contacts"])
 api_router.include_router(intelligence.router, prefix="/intelligence", tags=["Humanitarian Intelligence"])
 api_router.include_router(firms.router,        prefix="/firms",        tags=["NASA FIRMS"])
+api_router.include_router(danger.router, prefix="/danger", tags=["Danger Score"])
