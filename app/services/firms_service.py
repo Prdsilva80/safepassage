@@ -12,7 +12,6 @@ from app.core.config import settings
 log = structlog.get_logger()
 FIRMS_BASE = "https://firms.modaps.eosdis.nasa.gov/api"
 
-# Bounding boxes para zonas de conflito [west, south, east, north]
 CONFLICT_ZONES = {
     "Ukraine":  (22.0, 44.0, 40.0, 52.0),
     "Gaza":     (34.2, 31.2, 34.6, 31.6),
@@ -22,6 +21,9 @@ CONFLICT_ZONES = {
     "Myanmar":  (92.0, 16.0, 101.0, 28.0),
     "Somalia":  (40.0, -2.0, 51.0, 12.0),
     "Ethiopia": (33.0, 3.0,  48.0, 15.0),
+    "Iran":     (44.0, 25.0, 63.0, 40.0),
+    "Iraq":     (38.5, 29.0, 48.5, 37.5),
+    "Lebanon":  (35.0, 33.0, 36.6, 34.7),
 }
 
 def _parse_csv(text: str, source: str) -> list[dict]:
@@ -43,6 +45,11 @@ def _parse_csv(text: str, source: str) -> list[dict]:
             continue
     return hotspots
 
+def _client() -> httpx.AsyncClient:
+    """Cliente httpx forçando IPv4."""
+    transport = httpx.AsyncHTTPTransport(local_address="0.0.0.0")
+    return httpx.AsyncClient(timeout=30, transport=transport)
+
 async def get_hotspots(
     country: str = "Ukraine",
     days: int = 1,
@@ -61,7 +68,7 @@ async def get_hotspots(
     west, south, east, north = bbox
     try:
         url = f"{FIRMS_BASE}/area/csv/{key}/{source}/{west},{south},{east},{north}/{days}"
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with _client() as client:
             res = await client.get(url)
             res.raise_for_status()
         hotspots = _parse_csv(res.text, source)
@@ -76,13 +83,12 @@ async def get_hotspots_by_bbox(
     days: int = 1,
     source: str = "VIIRS_SNPP_NRT",
 ) -> list[dict]:
-    """Para usar com o viewport do mapa."""
     key = settings.firms_map_key
     if not key:
         return []
     try:
         url = f"{FIRMS_BASE}/area/csv/{key}/{source}/{west},{south},{east},{north}/{days}"
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with _client() as client:
             res = await client.get(url)
             res.raise_for_status()
         return _parse_csv(res.text, source)

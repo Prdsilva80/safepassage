@@ -174,7 +174,7 @@ export default function MapPage() {
     acc[l] = reports.filter(r => r.danger_level === l).length; return acc
   }, {})
 
-  const FIRMS_COUNTRIES = ['Ukraine','Gaza','Sudan','Syria','Yemen','Myanmar','Somalia','Ethiopia']
+  const FIRMS_COUNTRIES = ['Ukraine','Gaza','Sudan','Syria','Yemen','Iran','Iraq','Lebanon','Myanmar','Somalia','Ethiopia']
 
   return (
     <div style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
